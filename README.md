@@ -1,8 +1,10 @@
-# Personal Music Notation
+# Personal Music Notation Software
 
-A personal piano-score editor. Create, edit, engrave, and print beautiful piano scores in your browser.
+A personal bare-bones score editor built with Claude
+Create, edit, engrave, and print scores in your browser locally.
 
 Built with TypeScript, React, SVG rendering, and the Bravura music font.
+Uses Audiveris or homr (requires internet connection) to transcribe pdf's or images to scores with mixed results.
 
 ## Getting Started
 
@@ -76,5 +78,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed overview of the 
 ## License
 
 This project uses the **Bravura** music font, licensed under the SIL Open Font License (OFL). See [fonts/OFL.txt](fonts/OFL.txt) for details.
+
+For the optical music recognition function, this project uses Audiveris and homr, which uses the GNU Affero General Public License (AGPL).
 
 The project code is under the license specified in the repository root.
