@@ -1,6 +1,7 @@
 # Personal Music Notation Software
 
-A personal bare-bones score editor built with Claude
+A personal bare-bones score editor built with Claude.
+
 Create, edit, engrave, and print scores in your browser locally.
 
 Built with TypeScript, React, SVG rendering, and the Bravura music font.
