@@ -471,6 +471,13 @@ every push to `main` (Frank's choice; lint + tests must pass first, then
   the Salamander samples) under a cache named by a content hash, network-first for page
   loads, cache-first (`ignoreVary`, needed because servers send `Vary: Origin`) for the rest.
 - Tests that need this Mac (Audiveris under ~/Applications) skip elsewhere, so CI passes.
+- Feedback (2026-10-16): a "Send feedback" box at the bottom of the Help & FAQ panel
+  (`FeedbackForm` in HelpPanel.tsx, `sendFeedback` in src/ui/feedback.ts) POSTs JSON to
+  Web3Forms (api.web3forms.com/submit), which emails it to frankc@mail.instinct.com (the
+  inbox the access key was created for; the key is public by design, it can only send
+  there). Sends the message, optional name/email (as reply-to), page URL, user agent and
+  "website"/"local app" — never the score. A hidden `botcheck` checkbox is Web3Forms' spam
+  trap. Needs a connection (plain-language error otherwise). Free tier: 250 messages/month.
 - Not on the website: PDF/photo import (Audiveris/homr must run locally). Scores live in
   the browser's localStorage plus saved files. Web MIDI is Chrome/Edge only.
 

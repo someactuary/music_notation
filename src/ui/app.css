@@ -501,6 +501,51 @@ body {
   color: #1a3e72;
   white-space: nowrap;
 }
+/* Feedback box at the bottom of the Help panel. */
+.help-feedback {
+  border-top: 1px solid #e3e3e3;
+  margin-top: 10px;
+  padding-top: 4px;
+}
+.help-feedback-hint {
+  margin: 0 0 6px;
+  color: #666;
+}
+.help-feedback form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.help-feedback textarea,
+.help-feedback input:not([type="checkbox"]) {
+  font: inherit;
+  padding: 5px 7px;
+  border: 1px solid #c8ccd2;
+  border-radius: 4px;
+  resize: vertical;
+}
+.help-feedback button {
+  align-self: flex-start;
+  font: inherit;
+  padding: 4px 14px;
+  border: 1px solid #2f7cf6;
+  border-radius: 4px;
+  background: #2f7cf6;
+  color: #fff;
+  cursor: pointer;
+}
+.help-feedback button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.help-feedback-error {
+  margin: 0;
+  color: #b3261e;
+}
+.help-feedback-trap {
+  position: absolute;
+  left: -9999px;
+}
 .shortcuts-footnote {
   margin: 10px 0 0;
   color: #666;

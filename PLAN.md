@@ -709,3 +709,7 @@ score canvas is custom SVG either way).
   lookups missed because of `Vary: Origin`). README "Use it online" section; corrected the
   README's "homr requires internet" (it runs offline). Verified the built site served under
   /music_notation/ in headless Chromium, online and offline.
+- 2026-10-16 (feature: feedback box). Help & FAQ panel gets a "Send feedback" form,
+  delivered by Web3Forms to frankc@mail.instinct.com (Frank chose Web3Forms over Typeform/
+  Formspree/mailto). 8 new tests; verified in headless Chromium with the Web3Forms request
+  intercepted (no real message sent).
