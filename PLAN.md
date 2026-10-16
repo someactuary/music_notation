@@ -702,3 +702,10 @@ score canvas is custom SVG either way).
   palette toggle (Beam, beside Flip Stem): one note = break/rejoin the beam before it;
   several = flags/beam together. FAQ entry added. 1185 tests (6 new). Verified in headless
   Chromium. Gap: MusicXML export writes no beams.
+- 2026-10-16 (website). Published the app as a static site on GitHub Pages
+  (someactuary.github.io/music_notation), rebuilt on every push to main after lint + tests
+  pass. Web build: base path, website notice in the import dialog, installable + offline
+  (manifest, icons, generated service worker). Found and fixed an offline bug (cache
+  lookups missed because of `Vary: Origin`). README "Use it online" section; corrected the
+  README's "homr requires internet" (it runs offline). Verified the built site served under
+  /music_notation/ in headless Chromium, online and offline.

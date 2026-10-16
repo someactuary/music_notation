@@ -343,12 +343,17 @@ describe("createOmrService: status", () => {
     rmSync(tessdataDir, { recursive: true, force: true });
   });
 
-  it("never mistakes the real, locally installed Audiveris for 'not found' bookkeeping bugs (sanity check on this env)", () => {
-    // Not a functional assertion; documents why the "unavailable" test above must
-    // override HOME rather than just clearing opts.audiverisPath: this dev machine
-    // really does have Audiveris under ~/Applications.
-    expect(existsSync(path.join(homedir(), "Applications", "Audiveris.app"))).toBe(true);
-  });
+  // Only meaningful on a machine that has Audiveris installed (Frank's Mac), not on the
+  // GitHub Actions runner that builds the website.
+  it.skipIf(!existsSync(path.join(homedir(), "Applications", "Audiveris.app")))(
+    "never mistakes the real, locally installed Audiveris for 'not found' bookkeeping bugs (sanity check on this env)",
+    () => {
+      // Not a functional assertion; documents why the "unavailable" test above must
+      // override HOME rather than just clearing opts.audiverisPath: this dev machine
+      // really does have Audiveris under ~/Applications.
+      expect(existsSync(path.join(homedir(), "Applications", "Audiveris.app"))).toBe(true);
+    },
+  );
 });
 
 describe("createOmrService: upload validation", () => {

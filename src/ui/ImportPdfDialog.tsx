@@ -14,6 +14,7 @@ import { cleanupOmrScore } from "@/io/omr-cleanup";
 import { mergeOmrPages } from "@/io/omr-merge";
 import type { OmrCleanupOptions, OmrReviewItem } from "@/io/omr-cleanup";
 import type { Score } from "@/model";
+import { FULL_VERSION_URL, IS_WEBSITE } from "./site";
 
 export interface ImportedFromOmr {
   score: Score;
@@ -117,6 +118,7 @@ export function ImportPdfDialog({ onClose, onImported }: ImportPdfDialogProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchStatus = useCallback(async () => {
+    if (IS_WEBSITE) return; // no import service behind the website; see the notice below
     setError(null);
     setStatus(null);
     try {
@@ -127,7 +129,12 @@ export function ImportPdfDialog({ onClose, onImported }: ImportPdfDialogProps) {
       setEngine((current) => (s.engines[current].available ? current : (OMR_ENGINES.find((e) => s.engines[e].available) ?? current)));
       setStep(anyAvailable ? { kind: "choose" } : { kind: "status" });
     } catch (err) {
-      setError({ message: messageOf(err), retry: () => void fetchStatus() });
+      setError({
+        message:
+          `Couldn't reach the PDF/photo import service (${messageOf(err)}). ` +
+          "It runs alongside the app when you start it with npm run dev.",
+        retry: () => void fetchStatus(),
+      });
     }
   }, []);
 
@@ -210,6 +217,41 @@ export function ImportPdfDialog({ onClose, onImported }: ImportPdfDialogProps) {
   function chooseEngine(next: OmrEngine) {
     setEngine(next);
     saveEngine(next);
+  }
+
+  if (IS_WEBSITE) {
+    return (
+      <div className="import-dialog-overlay" role="presentation" onPointerDown={(e) => e.stopPropagation()}>
+        <div className="import-dialog" role="dialog" aria-label="Import PDF or photo">
+          <div className="import-dialog-header">
+            <strong>Import PDF or photo</strong>
+            <button type="button" onClick={onClose} aria-label="Close import dialog">
+              &times;
+            </button>
+          </div>
+          <p>
+            Turning a PDF or a photo of sheet music into an editable score isn&apos;t available on the website. The
+            music-recognition programs it uses (Audiveris and homr) have to run on your own computer.
+          </p>
+          <p>
+            To use it, install the full version: see{" "}
+            <a href={FULL_VERSION_URL} target="_blank" rel="noreferrer">
+              Getting Started
+            </a>
+            .
+          </p>
+          <p className="import-dialog-hint">
+            You can still open MusicXML files (.musicxml, .xml, .mxl) here with the Open button. Most notation programs
+            can export them.
+          </p>
+          <div className="import-dialog-actions">
+            <button type="button" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

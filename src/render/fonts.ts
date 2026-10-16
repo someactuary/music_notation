@@ -5,13 +5,19 @@
  * a node/vitest environment: every DOM access is guarded.
  */
 
+/**
+ * Where the app is served from: "/" locally, "/music_notation/" on the website (GitHub
+ * Pages serves the repo under its name). Vite sets BASE_URL from the build's `base`.
+ */
+const BASE = (import.meta.env?.BASE_URL as string | undefined) ?? "/";
+
 /** @font-face declaration for Bravura, served from public/fonts. */
 export const BRAVURA_FONT_FACE_CSS = `
 @font-face {
   font-family: "Bravura";
   src:
-    url("/fonts/Bravura.woff2") format("woff2"),
-    url("/fonts/Bravura.otf") format("opentype");
+    url("${BASE}fonts/Bravura.woff2") format("woff2"),
+    url("${BASE}fonts/Bravura.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
   font-display: block;
