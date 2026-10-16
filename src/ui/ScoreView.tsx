@@ -10,10 +10,12 @@ import {
   findSystemForMeasure,
   hitTestElement,
   idsInRect,
+  measureAtPoint,
   MOVABLE_ROLES,
   selectionBoxes,
   staffY,
   type ElementHit,
+  type MeasureHit,
   type Rect,
 } from "./layout-utils";
 
@@ -44,7 +46,16 @@ export interface ScoreViewProps {
   onDragMarking?: (id: string, dx: number, dy: number) => void;
   /** Where playback is; drawn as a line across the whole system, and the view follows it. Null/absent when not playing. */
   playhead?: PlayPosition | null;
+  /**
+   * Small +/− buttons on the hovered measure: "+" inserts an empty measure after it
+   * (`onInsertMeasure(measureIndex + 1)`), "−" deletes it. Omit both to hide the controls.
+   */
+  onInsertMeasure?: (index: number) => void;
+  onDeleteMeasure?: (measureIndex: number) => void;
 }
+
+/** Gap (sp) between the measure controls and the top staff line. */
+const MEASURE_CONTROLS_LIFT_SP = 1;
 
 const CURSOR_COLOR = "#2f7cf6";
 /** Cursor line colour while voice 2 (index 1) is active, so the active voice is visible at a glance. */
@@ -173,12 +184,20 @@ export function ScoreView({
   onDragPitch,
   onDragMarking,
   playhead,
+  onInsertMeasure,
+  onDeleteMeasure,
 }: ScoreViewProps) {
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragRef = useRef<DragStart | null>(null);
   const [rubberBand, setRubberBand] = useState<RubberBandState | null>(null);
   const [pitchDrag, setPitchDrag] = useState<PitchDragState | null>(null);
   const [markingDrag, setMarkingDrag] = useState<MarkingDragState | null>(null);
+  const [hovered, setHovered] = useState<(MeasureHit & { pageIndex: number }) | null>(null);
+  const showMeasureControls = Boolean(onInsertMeasure || onDeleteMeasure);
+  const measureCount = useMemo(
+    () => layout.pages.reduce((n, p) => n + p.systems.reduce((k, s) => k + s.measures.length, 0), 0),
+    [layout],
+  );
 
   const pageSvgs = useMemo(
     () =>
@@ -302,6 +321,21 @@ export function ScoreView({
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
+  /** Tracks which measure the pointer is over, for the +/− controls (only while not dragging). */
+  function updateHover(event: ReactPointerEvent<HTMLDivElement>, pageIndex: number) {
+    if (!showMeasureControls || dragRef.current) return;
+    const svg = svgFor(pageIndex);
+    const pt = svg ? clientPointToSvg(svg, event.clientX, event.clientY) : null;
+    const hit = pt ? measureAtPoint(layout, pageIndex, pt.x, pt.y) : null;
+    setHovered((prev) =>
+      hit
+        ? prev && prev.pageIndex === pageIndex && prev.measureIndex === hit.measureIndex && prev.right === hit.right
+          ? prev
+          : { ...hit, pageIndex }
+        : null,
+    );
+  }
+
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     const start = dragRef.current;
     if (!start) return;
@@ -404,8 +438,12 @@ export function ScoreView({
               pageRefs.current[i] = el;
             }}
             onPointerDown={(e) => handlePointerDown(e, i)}
-            onPointerMove={handlePointerMove}
+            onPointerMove={(e) => {
+              updateHover(e, i);
+              handlePointerMove(e);
+            }}
             onPointerUp={handlePointerUp}
+            onPointerLeave={() => setHovered(null)}
           >
             {/* SVG string comes from the pure renderer (src/render/svg.ts), not user input. */}
             <div className="page-content" dangerouslySetInnerHTML={{ __html: pageSvgs[i]! }} />
@@ -485,6 +523,45 @@ export function ScoreView({
                 />
               )}
             </svg>
+            {hovered && hovered.pageIndex === page.index && !rubberBand && !pitchDrag && !markingDrag && (
+              <div
+                className="measure-controls"
+                style={{
+                  left: `${(hovered.right / page.widthSp) * 100}%`,
+                  top: `${((hovered.top - MEASURE_CONTROLS_LIFT_SP) / page.heightSp) * 100}%`,
+                }}
+                // The page container captures the pointer for clicks and drags; these are buttons.
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+              >
+                {onInsertMeasure && (
+                  <button
+                    type="button"
+                    className="measure-control"
+                    title={`Insert an empty measure after measure ${hovered.measureIndex + 1}`}
+                    aria-label={`Insert an empty measure after measure ${hovered.measureIndex + 1}`}
+                    onClick={() => onInsertMeasure(hovered.measureIndex + 1)}
+                  >
+                    +
+                  </button>
+                )}
+                {onDeleteMeasure && (
+                  <button
+                    type="button"
+                    className="measure-control measure-control-delete"
+                    disabled={measureCount <= 1}
+                    title={`Delete measure ${hovered.measureIndex + 1} (Undo restores it)`}
+                    aria-label={`Delete measure ${hovered.measureIndex + 1}`}
+                    onClick={() => {
+                      onDeleteMeasure(hovered.measureIndex);
+                      setHovered(null);
+                    }}
+                  >
+                    −
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       ))}

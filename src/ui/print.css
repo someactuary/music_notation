@@ -51,8 +51,9 @@
     break-after: auto;
   }
 
-  /* Cursor/selection are editing aids, not part of the printed score. */
-  .editor-overlay {
+  /* Cursor/selection and the measure +/− buttons are editing aids, not part of the printed score. */
+  .editor-overlay,
+  .measure-controls {
     display: none;
   }
 

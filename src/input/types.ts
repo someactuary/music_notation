@@ -152,6 +152,10 @@ export type PaletteAction =
   | { kind: "setClef"; staffIndex: number; clef: ClefKind }
   // A clef change from the first selected note (or the cursor, when nothing is selected) on.
   | { kind: "clefChange"; clef: ClefKind }
+  // Measures (the +/− buttons on a hovered measure): insert an empty measure at `index`
+  // (so `measureIndex + 1` = after it), or delete one measure.
+  | { kind: "insertMeasure"; index: number }
+  | { kind: "deleteMeasure"; measureIndex: number }
   | { kind: "setStaffName"; staffIndex: number; name: string; abbreviation?: string }
   | { kind: "setBracket"; bracket: StaffGroupSymbol }
   // Score info: title/subtitle/composer/lyricist/copyright (src/ui/ScoreInfoPanel.tsx).

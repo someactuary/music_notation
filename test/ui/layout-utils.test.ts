@@ -4,7 +4,7 @@ import { BRAVURA } from "@/render/smufl";
 import { frac, newId, newPianoScore, note } from "@/model";
 import type { Score } from "@/model";
 import { minuet } from "../fixtures/minuet";
-import { cursorX, findSystemForMeasure, hitTestPoint, locateEvent, staffY } from "@/ui/layout-utils";
+import { cursorX, findSystemForMeasure, hitTestPoint, locateEvent, MEASURE_HOVER_ABOVE_SP, measureAtPoint, staffY } from "@/ui/layout-utils";
 
 /** A single 4/4 measure: treble has a half + two quarters (columns at 0, 1/2, 3/4); bass is a whole rest. */
 function makeSingleMeasureScore(): Score {
@@ -146,5 +146,34 @@ describe("hitTestPoint", () => {
   it("returns null for a page index that doesn't exist", () => {
     const layout = engrave(makeSingleMeasureScore(), { font: BRAVURA });
     expect(hitTestPoint(layout, 99, 0, 0)).toBeNull();
+  });
+});
+
+describe("measureAtPoint (hover target for the measure +/− buttons)", () => {
+  const score = newPianoScore({ measureCount: 3 });
+  const layout = engrave(score, { font: BRAVURA });
+  const page = layout.pages[0]!;
+  const system = page.systems[0]!;
+  const top = system.y + system.staves[0]!.y;
+  const mid = (mi: number) => system.x + system.measures[mi]!.x + system.measures[mi]!.width / 2;
+
+  it("finds the measure under the point, anywhere from the top staff to the bottom staff", () => {
+    const lowerStaff = system.y + system.staves[1]!.y + 2;
+    expect(measureAtPoint(layout, 0, mid(1), lowerStaff)?.measureIndex).toBe(1);
+    const hit = measureAtPoint(layout, 0, mid(2), top + 1)!;
+    expect(hit.measureIndex).toBe(2);
+    expect(hit.top).toBeCloseTo(top, 6);
+    const m2 = system.measures[2]!;
+    expect(hit.right).toBeCloseTo(system.x + m2.x + m2.width, 6);
+  });
+
+  it("still counts the room above the top staff where the buttons sit, but not beyond it", () => {
+    expect(measureAtPoint(layout, 0, mid(0), top - MEASURE_HOVER_ABOVE_SP + 0.5)?.measureIndex).toBe(0);
+    expect(measureAtPoint(layout, 0, mid(0), top - MEASURE_HOVER_ABOVE_SP - 1)).toBeNull();
+  });
+
+  it("is null in the page margin", () => {
+    expect(measureAtPoint(layout, 0, 0.5, top + 1)).toBeNull();
+    expect(measureAtPoint(layout, 5, mid(0), top + 1)).toBeNull();
   });
 });

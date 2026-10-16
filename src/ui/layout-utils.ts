@@ -585,6 +585,47 @@ export function hitTestElement(
 }
 
 // ---------------------------------------------------------------------------
+// measureAtPoint (hover target for the measure +/− controls)
+// ---------------------------------------------------------------------------
+
+/** How far above the top staff (sp) a measure still counts as hovered: room for its +/− controls. */
+export const MEASURE_HOVER_ABOVE_SP = 4;
+/** How far below the bottom staff (sp) a measure still counts as hovered. */
+export const MEASURE_HOVER_BELOW_SP = 2;
+
+export interface MeasureHit {
+  measureIndex: number;
+  /** Page sp x of the measure's right edge (its closing barline). */
+  right: number;
+  /** Page sp y of the system's top staff line. */
+  top: number;
+}
+
+/**
+ * The measure under a page point (page sp coordinates), counting the whole height of its
+ * system plus a margin above the top staff, so the pointer can travel up onto the
+ * controls drawn there without the hover ending. Null over margins and between systems.
+ */
+export function measureAtPoint(layout: LayoutResult, pageIndex: number, xSp: number, ySp: number): MeasureHit | null {
+  const page = layout.pages[pageIndex];
+  if (!page) return null;
+  for (const system of page.systems) {
+    const first = system.staves[0];
+    const last = system.staves[system.staves.length - 1];
+    if (!first || !last) continue;
+    const top = system.y + first.y;
+    const bottom = system.y + last.y + (last.lineCount - 1);
+    if (ySp < top - MEASURE_HOVER_ABOVE_SP || ySp > bottom + MEASURE_HOVER_BELOW_SP) continue;
+    for (const m of system.measures) {
+      const left = system.x + m.x;
+      const right = left + m.width;
+      if (xSp >= left && xSp <= right) return { measureIndex: m.measureIndex, right, top };
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // pdfPageForMeasure
 // ---------------------------------------------------------------------------
 

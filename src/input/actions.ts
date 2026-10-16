@@ -7,7 +7,7 @@
 import { produce } from "immer";
 import { add, clefAt, cmp, diatonic, fromDiatonic, keyAlter, newId, notated, ZERO, type Anchor, type Score } from "@/model";
 import { locateEvent, locateNote } from "@/commands/locate";
-import { setMeta, setNotePitch } from "@/commands/basic";
+import { addMeasures, removeMeasure, setMeta, setNotePitch } from "@/commands/basic";
 import { makeTuplet, setDurationAt, toggleDotAt } from "@/commands/edit";
 import {
   addAttachment,
@@ -321,6 +321,33 @@ export const handleAction: ActionHandler = (state, action) => {
 
     case "setKeySignature":
       return { commands: [setKeySignature(cursor.measureIndex, action.keySig)] };
+
+    case "insertMeasure": {
+      const count = score.measures.length;
+      const index = Math.min(Math.max(action.index, 0), count);
+      // Keep the cursor on the same music: it moves along when the new measure lands before it.
+      const moved = cursor.measureIndex >= index ? { cursor: { ...cursor, measureIndex: cursor.measureIndex + 1 } } : {};
+      return { commands: [addMeasures(1, index)], ...moved, message: `Inserted an empty measure ${index + 1}` };
+    }
+
+    case "deleteMeasure": {
+      const count = score.measures.length;
+      const mi = action.measureIndex;
+      if (mi < 0 || mi >= count) return { commands: [], message: "No such measure" };
+      if (count <= 1) return { commands: [], message: "Cannot remove the only measure" };
+      // A cursor in or after the deleted measure moves back with the music; inside it, to the start of what follows.
+      const cursorMeasure =
+        cursor.measureIndex > mi ? cursor.measureIndex - 1 : cursor.measureIndex === mi ? Math.min(mi, count - 2) : cursor.measureIndex;
+      const nextCursor =
+        cursor.measureIndex < mi ? cursor : cursor.measureIndex > mi ? { ...cursor, measureIndex: cursorMeasure } : { ...cursor, measureIndex: cursorMeasure, offset: ZERO };
+      return {
+        commands: [removeMeasure(mi)],
+        cursor: nextCursor,
+        // Ids inside the deleted measure no longer exist; don't leave them selected.
+        selection: { ids: [] },
+        message: `Deleted measure ${mi + 1} (Undo restores it)`,
+      };
+    }
 
     case "clefChange": {
       // At the earliest selected note, else at the cursor. A change at the cursor's

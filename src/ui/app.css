@@ -387,6 +387,42 @@ body {
   pointer-events: none;
 }
 
+/* +/− buttons on the hovered measure (ScoreView), anchored at its closing barline,
+   just above the top staff. */
+.measure-controls {
+  position: absolute;
+  transform: translate(-100%, -100%);
+  display: flex;
+  gap: 3px;
+  line-height: 1;
+  z-index: 2;
+}
+.measure-control {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #9aa4b2;
+  background: #fff;
+  color: #333;
+  font: 600 14px/18px system-ui, sans-serif;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.measure-control:hover {
+  border-color: #2f7cf6;
+  color: #2f7cf6;
+}
+.measure-control-delete:hover {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+.measure-control:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* Shortcuts panel */
 .shortcuts-panel {
   position: fixed;

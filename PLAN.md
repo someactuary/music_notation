@@ -658,3 +658,16 @@ score canvas is custom SVG either way).
   headless Chromium. Carry-overs: only Treble and Bass buttons (alto/tenor and octave
   clefs only via import or the Staves panel's opening clef); a clef change can't be
   dragged; a change on a cross-staff note uses the host staff.
+- 2026-10-16 (feature: measure +/− buttons; offline OMR check). Frank: Audiveris and homr
+  "don't work" offline; and asked for small + / − controls on measures to delete the
+  impossible measures OMR produces. Offline: not reproduced. With the network blocked by a
+  macOS sandbox (verified: outbound requests refused), homr and Audiveris CLIs, the PDF
+  renderer, and the full import dialog against a sandboxed dev server all worked; neither
+  engine makes network calls (homr's text reader only checks its local model files).
+  Leading guess: files in iCloud Drive/Photos that aren't downloaded can't be read
+  offline; asked Frank for the error text. Measures: hover +/− buttons (insert after /
+  delete this measure), actions that keep the cursor on the same music, Measures section
+  in the Shortcuts panel (Enter / ⇧Enter / ⌘⌫ already existed), and fixes to
+  removeMeasure (keeps time/key signature, clef, final barline) and addMeasures (shifts
+  breaks and anchors; inserting before measure 1 keeps the opening signatures). 1135 tests
+  (16 new). Verified in headless Chromium.

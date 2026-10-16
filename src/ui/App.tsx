@@ -837,6 +837,8 @@ export function App() {
             onDragPitch={handleDragPitch}
             onDragMarking={handleDragMarking}
             playhead={playback.playhead}
+            onInsertMeasure={(index) => editor.applyAction({ kind: "insertMeasure", index })}
+            onDeleteMeasure={(measureIndex) => editor.applyAction({ kind: "deleteMeasure", measureIndex })}
           />
         </main>
         {compareOpen && pdfSession && (

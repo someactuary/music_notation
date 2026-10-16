@@ -353,6 +353,32 @@ Audiveris import of a piano piece whose left hand switches clef mid-measure.
   bass clef in m1 (its misread, flagged for review with the rest of that measure).
   Editor round trip (add, select, Delete, Undo) checked in headless Chromium.
 
+## Inserting and deleting measures (2026-10-16)
+
+Frank fixes OMR imports where a measure is beyond repair (e.g. five beats in 4/4) by
+deleting the whole measure. Enter / ⇧Enter / ⌘⌫ already inserted and deleted measures,
+but weren't listed in the Shortcuts panel, so he hadn't found them.
+
+- **Hover controls** (`ScoreView`): over a measure (its whole system height plus
+  `MEASURE_HOVER_ABOVE_SP` above the top staff, see `measureAtPoint` in layout-utils.ts),
+  two small round buttons sit at its closing barline just above the top staff: "+" sends
+  `{ kind: "insertMeasure", index: measureIndex + 1 }`, "−" sends
+  `{ kind: "deleteMeasure", measureIndex }` (disabled when it's the only measure). They're
+  HTML over the page and stop pointer events from reaching the page's click/drag handling;
+  hidden while dragging and in print. Undo restores a deleted measure.
+- **Actions** (actions.ts) keep the cursor on the same music (it moves with a measure
+  inserted before it or deleted before it; inside a deleted measure it goes to the start of
+  what follows) and clear the selection after a delete (its ids may be gone).
+- **Commands** (basic.ts) now keep what the surrounding music depends on:
+  - `removeMeasure`: a time or key signature the measure declared moves to the next
+    measure (unless it declares its own), so deleting measure 1 no longer drops the piece's
+    meter and key; the clef each staff is left in carries onto the next measure (or
+    becomes the staff's opening clef when measure 1 is deleted); a final barline moves to
+    the new last measure.
+  - `addMeasures`: later measure anchors and forced system/page breaks move with their
+    music (they used to stay at the old index); inserting before measure 1 moves the
+    opening time and key signature onto the new first measure.
+
 ## Manual layout control (2026-09-15)
 
 Requested by Frank after PDF import left a real file with a sparse last page (a

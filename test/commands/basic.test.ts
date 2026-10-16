@@ -277,3 +277,70 @@ describe("removeMeasure anchor handling", () => {
     expect(next.layout.systemBreaks).toEqual([1]);
   });
 });
+
+describe("measure insert/delete keep what the music around them depends on", () => {
+  it("addMeasures moves later forced breaks and measure anchors along with their music", () => {
+    const score = newPianoScore({ measureCount: 4 });
+    score.layout.systemBreaks = [1, 3];
+    score.layout.pageBreaks = [3];
+    score.attachments.push({
+      id: "dyn",
+      kind: "dynamic",
+      text: "p",
+      partIndex: 0,
+      staffIndex: 0,
+      anchor: { kind: "measure", measureIndex: 2, offset: { num: 0, den: 1 } },
+    });
+    const next = produce(score, (d) => addMeasures(1, 2).apply(d));
+    expect(next.layout.systemBreaks).toEqual([1, 4]);
+    expect(next.layout.pageBreaks).toEqual([4]);
+    expect(next.attachments[0]!.anchor).toMatchObject({ kind: "measure", measureIndex: 3 });
+  });
+
+  it("addMeasures before the first measure moves the opening time and key signature onto it", () => {
+    const score = newPianoScore({ measureCount: 2, timeSig: { numerator: 3, denominator: 4 }, keySig: { fifths: -2, mode: "major" } });
+    const next = produce(score, (d) => addMeasures(1, 0).apply(d));
+    expect(next.measures[0]!.timeSig).toEqual({ numerator: 3, denominator: 4 });
+    expect(next.measures[0]!.keySig).toEqual({ fifths: -2, mode: "major" });
+    expect(next.measures[1]!.timeSig).toBeUndefined();
+    expect(next.measures[1]!.keySig).toBeUndefined();
+  });
+
+  it("removeMeasure of the first measure keeps the piece's time and key signature", () => {
+    const score = newPianoScore({ measureCount: 3, timeSig: { numerator: 6, denominator: 8 }, keySig: { fifths: 3, mode: "minor" } });
+    const next = produce(score, (d) => removeMeasure(0).apply(d));
+    expect(next.measures[0]!.timeSig).toEqual({ numerator: 6, denominator: 8 });
+    expect(next.measures[0]!.keySig).toEqual({ fifths: 3, mode: "minor" });
+  });
+
+  it("removeMeasure doesn't overwrite a signature the next measure declares itself", () => {
+    const score = newPianoScore({ measureCount: 3 });
+    score.measures[1]!.timeSig = { numerator: 3, denominator: 4 };
+    const next = produce(score, (d) => removeMeasure(0).apply(d));
+    expect(next.measures[0]!.timeSig).toEqual({ numerator: 3, denominator: 4 });
+  });
+
+  it("removeMeasure carries a clef change in the deleted measure onto the next one", () => {
+    const score = newPianoScore({ measureCount: 3 });
+    score.parts[0]!.measures[1]!.staves[1]!.clefChanges = [{ at: { num: 1, den: 2 }, clef: "treble" }];
+    const next = produce(score, (d) => removeMeasure(1).apply(d));
+    expect(next.parts[0]!.measures[1]!.staves[1]!.clefChanges).toEqual([{ at: { num: 0, den: 1 }, clef: "treble" }]);
+    // The upper staff had no change: nothing added there.
+    expect(next.parts[0]!.measures[1]!.staves[0]!.clefChanges).toBeUndefined();
+  });
+
+  it("removeMeasure of the first measure turns its clef change into the staff's opening clef", () => {
+    const score = newPianoScore({ measureCount: 2 });
+    score.parts[0]!.measures[0]!.staves[1]!.clefChanges = [{ at: { num: 3, den: 4 }, clef: "treble" }];
+    const next = produce(score, (d) => removeMeasure(0).apply(d));
+    expect(next.parts[0]!.staves[1]!.initialClef).toBe("treble");
+    expect(next.parts[0]!.measures[0]!.staves[1]!.clefChanges).toBeUndefined();
+  });
+
+  it("removeMeasure of the last measure moves the final barline back", () => {
+    const score = newPianoScore({ measureCount: 3 });
+    expect(score.measures[2]!.barline).toBe("final");
+    const next = produce(score, (d) => removeMeasure(2).apply(d));
+    expect(next.measures[1]!.barline).toBe("final");
+  });
+});

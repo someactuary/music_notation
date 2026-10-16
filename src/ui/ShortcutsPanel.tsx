@@ -83,6 +83,14 @@ const SECTIONS: { title: string; rows: [string, string][] }[] = [
     ],
   },
   {
+    title: "Measures",
+    rows: [
+      ["Hover + / −", "Insert an empty measure after this one / delete this measure"],
+      ["Enter / ⇧Enter", "Insert an empty measure after / before the cursor's measure"],
+      ["⌘⌫", "Delete the cursor's measure"],
+    ],
+  },
+  {
     title: "History",
     rows: [
       ["⌘Z / ⌘⇧Z", "Undo / redo"],

@@ -3,8 +3,19 @@
  * (see src/commands/types.ts): construct it with whatever it needs to know,
  * and `apply(draft)` performs the edit against an immer draft.
  */
-import { emptyVoice, newId } from "@/model";
-import type { Anchor, MeasureAttributes, NotatedDuration, PartMeasure, Pitch, RestEvent, ScoreMeta, VoiceItem } from "@/model";
+import { clefEnteringMeasure, cmp, emptyVoice, newId, ZERO } from "@/model";
+import type {
+  Anchor,
+  ClefKind,
+  MeasureAttributes,
+  NotatedDuration,
+  PartMeasure,
+  Pitch,
+  RestEvent,
+  Score,
+  ScoreMeta,
+  VoiceItem,
+} from "@/model";
 import { findEventInVoice, locateEvent, locateNote, type Event } from "./locate";
 import { captureStemBaseline, reconcileStemAfterPitchChange } from "./notation";
 import type { Command } from "./types";
@@ -138,7 +149,12 @@ export function toggleTie(noteId: string): Command {
   };
 }
 
-/** Inserts `count` empty measures (a measure-rest in every staff's voice 0, for every part) at `atIndex` (defaults to the end). */
+/**
+ * Inserts `count` empty measures (a measure-rest in every staff's voice 0, for every part) at
+ * `atIndex` (defaults to the end). Later measure anchors and forced system/page breaks move
+ * with the measures they belong to, so a break stays before the same music. Inserting before
+ * the first measure moves the opening time and key signature onto the new first measure.
+ */
 export function addMeasures(count: number, atIndex?: number): Command {
   return {
     label: "Add measures",
@@ -147,6 +163,14 @@ export function addMeasures(count: number, atIndex?: number): Command {
       const appending = insertAt === draft.measures.length;
 
       const newMeasureAttrs: MeasureAttributes[] = Array.from({ length: count }, () => ({ id: newId() }));
+      const oldFirst = draft.measures[0];
+      if (insertAt === 0 && oldFirst && count > 0) {
+        const opening = newMeasureAttrs[0]!;
+        if (oldFirst.timeSig) opening.timeSig = oldFirst.timeSig;
+        if (oldFirst.keySig) opening.keySig = oldFirst.keySig;
+        delete oldFirst.timeSig;
+        delete oldFirst.keySig;
+      }
       // Appending after a final barline: the final barline moves to the new last measure.
       const last = draft.measures[draft.measures.length - 1];
       if (appending && last && last.barline === "final") {
@@ -161,6 +185,18 @@ export function addMeasures(count: number, atIndex?: number): Command {
         }));
         part.measures.splice(insertAt, 0, ...newPartMeasures);
       }
+
+      const shift = (a: Anchor): void => {
+        if (a.kind === "measure" && a.measureIndex >= insertAt) a.measureIndex += count;
+      };
+      for (const sp of draft.spanners) {
+        shift(sp.start);
+        shift(sp.end);
+      }
+      for (const at of draft.attachments) shift(at.anchor);
+      const later = (xs: number[]): number[] => xs.map((m) => (m >= insertAt ? m + count : m));
+      draft.layout.systemBreaks = later(draft.layout.systemBreaks);
+      draft.layout.pageBreaks = later(draft.layout.pageBreaks);
     },
   };
 }
@@ -168,6 +204,9 @@ export function addMeasures(count: number, atIndex?: number): Command {
 /**
  * Removes the measure at `index` from every part. Drops spanners/attachments anchored to that
  * measure or to any event inside it, shifts later measure anchors and layout breaks down by one.
+ * What the measure set up for the music after it survives: a time or key signature it
+ * declared, and the clef a staff was left in, move onto the next measure (unless that
+ * measure declares its own), and a final barline moves to the new last measure.
  */
 export function removeMeasure(index: number): Command {
   return {
@@ -175,6 +214,27 @@ export function removeMeasure(index: number): Command {
     apply(draft) {
       if (index < 0 || index >= draft.measures.length) {
         throw new Error(`removeMeasure: index ${index} out of range`);
+      }
+
+      const removedAttrs = draft.measures[index]!;
+      const next = draft.measures[index + 1];
+      if (next) {
+        if (removedAttrs.timeSig && !next.timeSig) next.timeSig = removedAttrs.timeSig;
+        if (removedAttrs.keySig && !next.keySig) next.keySig = removedAttrs.keySig;
+      } else if (removedAttrs.barline === "final" && index > 0) {
+        const newLast = draft.measures[index - 1]!;
+        if (!newLast.barline || newLast.barline === "regular") newLast.barline = "final";
+      }
+      // Clef each staff should be in when the next measure starts, decided before anything moves.
+      const carriedClefs: { part: number; staff: number; clef: ClefKind }[] = [];
+      if (next) {
+        for (const [pi, part] of draft.parts.entries()) {
+          for (const si of part.staves.keys()) {
+            const entering = clefEnteringMeasure(draft as Score, pi, si, index);
+            const leaving = clefEnteringMeasure(draft as Score, pi, si, index + 1);
+            if (leaving !== entering) carriedClefs.push({ part: pi, staff: si, clef: leaving });
+          }
+        }
       }
 
       // Collect ids of every event living in the removed measure so anchors to them can be dropped.
@@ -201,6 +261,17 @@ export function removeMeasure(index: number): Command {
       draft.measures.splice(index, 1);
       for (const part of draft.parts) {
         part.measures.splice(index, 1);
+      }
+      for (const c of carriedClefs) {
+        if (index === 0) {
+          // The new first measure: the clef it opens in is the staff's opening clef.
+          const staff = draft.parts[c.part]?.staves[c.staff];
+          if (staff) staff.initialClef = c.clef;
+          continue;
+        }
+        const sm = draft.parts[c.part]?.measures[index]?.staves[c.staff];
+        if (!sm || (sm.clefChanges ?? []).some((x) => cmp(x.at, ZERO) === 0)) continue;
+        sm.clefChanges = [{ at: ZERO, clef: c.clef }, ...(sm.clefChanges ?? [])];
       }
 
       const gone = (a: Anchor): boolean =>
