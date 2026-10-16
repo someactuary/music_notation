@@ -105,6 +105,17 @@ function resolveSpanEndpoints(state: EditorState): { start: SelectedEvent; end: 
   return { start, end };
 }
 
+/**
+ * Selected events, latest first. Duration changes run in this order: lengthening an
+ * event overwrites what follows it, so a later selected event must be changed before an
+ * earlier one can overwrite (and remove) it.
+ */
+function latestFirst(score: Score, events: SelectedEvent[]): SelectedEvent[] {
+  return [...events].sort((a, b) =>
+    cmp(absoluteOffset(score, b.measureIndex, b.offset), absoluteOffset(score, a.measureIndex, a.offset)),
+  );
+}
+
 /** Anchor (+ part/staff) for tempo/text: the first selected event, or the cursor's own measure/offset if nothing is selected. Unlike `targetEvents`, this never falls back through the cursor's *event*, and doesn't require note entry to be active. */
 function anchorAtSelectionOrCursor(state: EditorState): { anchor: Anchor; partIndex: number; staffIndex: number } {
   const selected = resolveSelection(state.score, state.selection);
@@ -258,14 +269,14 @@ export const handleAction: ActionHandler = (state, action) => {
     }
 
     case "setDuration": {
-      const targets = resolveSelection(score, state.selection);
+      const targets = latestFirst(score, resolveSelection(score, state.selection));
       if (targets.length === 0) return { commands: [], message: "Nothing selected" };
       const cmds = targets.map((t) => setDurationAt(t.event.id, notated(action.base, action.dots)));
       return commandsWithRefusalsAsMessage(score, cmds);
     }
 
     case "toggleDot": {
-      const targets = resolveSelection(score, state.selection);
+      const targets = latestFirst(score, resolveSelection(score, state.selection));
       if (targets.length === 0) return { commands: [], message: "Nothing selected" };
       return commandsWithRefusalsAsMessage(score, targets.map((t) => toggleDotAt(t.event.id)));
     }

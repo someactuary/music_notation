@@ -12,15 +12,15 @@ const SECTIONS: { title: string; rows: [string, string][] }[] = [
     rows: [
       ["1 / 2 / 4", "Whole / half / quarter"],
       ["8 / 6 / 3", "Eighth / 16th / 32nd"],
-      [".", "Toggle dot (Alt+. double dot)"],
-      ["(entry off) 1-8/.", "With a selection: set duration / toggle dot on it instead"],
+      [".", "Dot the next note only (Alt+. double dot); the dot clears once that note is entered"],
+      ["1-8 / . (selection)", "Change the selected notes' duration / toggle their dot (longer overwrites what follows; shorter leaves rests)"],
     ],
   },
   {
     title: "Pitches and rests (entry on)",
     rows: [
       ["A … G", "Enter pitch (nearest octave, key signature applied), cursor advances"],
-      ["Shift+A … G", "Add pitch above the top note of the chord just entered"],
+      ["Shift+A … G", "Add pitch above the top note of the selected chord (or the chord just entered)"],
       ["0", "Rest of the current duration"],
       ["+ / -", "Next note sharp / flat (or alter selected notes)"],
       ["T", "Toggle tie on last entered / selected note"],

@@ -177,6 +177,17 @@ export function KeyboardIcon() {
   );
 }
 
+/** A circled question mark: Help & FAQ. */
+export function HelpIcon() {
+  return (
+    <IconBase>
+      <circle cx={8} cy={8} r={6.2} />
+      <path d="M6.1 6.2a1.95 1.95 0 1 1 2.75 1.8c-.55.25-.85.7-.85 1.3v.4" />
+      <path d="M8 11.4h.01" />
+    </IconBase>
+  );
+}
+
 /** A circled "i": Score Info. */
 export function InfoIcon() {
   return (

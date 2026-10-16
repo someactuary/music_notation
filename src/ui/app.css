@@ -467,6 +467,40 @@ body {
   color: #1a73e8;
   width: 120px;
 }
+/* Help & FAQ panel: same frame as the shortcuts panel, a bit wider for prose. */
+.help-panel {
+  width: 420px;
+  line-height: 1.45;
+}
+.help-entry {
+  border-top: 1px solid #e3e3e3;
+  padding: 6px 0;
+}
+.help-entry summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.help-entry p,
+.help-entry ul {
+  margin: 6px 0;
+}
+.help-entry ul {
+  padding-left: 18px;
+}
+.help-entry li {
+  margin: 3px 0;
+}
+.help-panel kbd {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  padding: 0 4px;
+  border: 1px solid #c8ccd2;
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: #f6f7f9;
+  color: #1a3e72;
+  white-space: nowrap;
+}
 .shortcuts-footnote {
   margin: 10px 0 0;
   color: #666;

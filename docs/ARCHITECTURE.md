@@ -379,6 +379,43 @@ but weren't listed in the Shortcuts panel, so he hadn't found them.
     music (they used to stay at the old index); inserting before measure 1 moves the
     opening time and key signature onto the new first measure.
 
+## Help & FAQ panel (2026-10-16)
+
+A "?" toolbar button (left of Keyboard shortcuts) opens `HelpPanel`, which renders the
+entries in `src/ui/help-faq.ts`: `{ id, question, answer }`, the answer a list of
+paragraphs and bullet lists, with inline `` `keys` `` (drawn as `<kbd>`) and `**bold**`
+(`parseInline`). Frank asked to "populate it as we go": add an entry by appending to
+`FAQ`, written for someone using the app. Each entry is a collapsible `<details>` (a lone
+entry shows open). Help and Shortcuts open in the same spot, so opening one closes the
+other. First entry: entering chords.
+
+Shift+letter (add a chord note) now adds to the **selected** chord(s) when anything is
+selected, each in the octave just above its own top note and spelled by the key where the
+chord is; with nothing selected it still adds to the note before the cursor. Before, it
+always used the note before the cursor, ignoring the selection.
+
+Delete/Backspace with only some notes of a chord selected removes just those notes
+(`removeNoteFromEvent`, via `eraseSelected`'s `singleNotes` option); with every note of a
+chord selected, the chord is erased as before (ties/decorations stripped first). Cut (⌘X)
+keeps whole-chord deletion, since copying always takes whole chords and the clipboard
+should match what disappears.
+
+Duration keys on a selection: `1 2 4 8 6 3` / `.` change the selected notes/rests
+(`setDuration` / `toggleDot`, the existing span-replace rules: longer overwrites what
+follows, a partly covered note's remainder becomes a rest; shorter leaves rests; a span
+past the barline is refused with a message) in **both** entry modes. They used to do this
+only with note entry off; with it on they only set the next note's duration. A digit gives
+the plain value (dots 0), not the pending entry dot; with entry on it also sets the entry
+duration. Several selected events are changed latest-first (`latestFirst` in actions.ts),
+so lengthening an earlier one can't remove a later one before its own change applies.
+
+The entry dot is one-shot (Frank, 2026-10-16): `enter()` (letters, `0`, MIDI) resets
+`entry.dots` to 0 after writing, since a dotted note is almost always followed by an
+undotted one (8 . C 6 D). The duration stays. Because `enter()` auto-selects what it just
+wrote, duration keys would otherwise hit that note; `isJustTypedSelection` (the selection
+is only the event right before the cursor, which a click never produces since a click puts
+the cursor AT the note) lets them fall through to setting the next note's duration/dot.
+
 ## Manual layout control (2026-09-15)
 
 Requested by Frank after PDF import left a real file with a sparse last page (a

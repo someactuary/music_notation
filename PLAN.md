@@ -671,3 +671,24 @@ score canvas is custom SVG either way).
   removeMeasure (keeps time/key signature, clef, final barline) and addMeasures (shifts
   breaks and anchors; inserting before measure 1 keeps the opening signatures). 1135 tests
   (16 new). Verified in headless Chromium.
+- 2026-10-16 (feature: Help & FAQ panel; fix: Shift+letter on a selected note). A "?"
+  toolbar button opens a Help & FAQ panel fed by src/ui/help-faq.ts, to be filled in as
+  questions come up; first entry: how to enter chords (one event, not separate voices).
+  Frank reported that with a note selected, Shift+letter added the pitch to the note
+  before the cursor instead; it now adds to the selected chord(s). 1146 tests (11 new).
+  Verified in headless Chromium. Then, at Frank's request, Delete/Backspace on some notes
+  of a chord removes only those notes (whole chord when all are selected; cut still takes
+  whole chords).
+- 2026-10-16 (feature: duration keys on a selection). Frank: with a note or chord selected,
+  1/2/4/8/6/3/. should change its duration, overwriting what follows when longer and
+  leaving rests when shorter. Those rules already existed (setDurationAt), and the keys
+  worked on a selection only with note entry OFF; now in both modes, digits give the plain
+  value, multiple selections change latest-first. Shortcuts panel updated; FAQ entry
+  "How do I change how long a note or chord is?". 1163 tests (12 new). Verified in
+  headless Chromium. Limit: lengthening past the barline is refused, not tied over.
+- 2026-10-16 (feature: one-shot dot). The entry dot now clears after the next note/rest is
+  entered (8 . C 6 D = dotted eighth + 16th). Also fixed a regression the duration-keys
+  change would have caused: typing a note auto-selects it, so a digit right after typing
+  changed that note instead of the next one; duration keys now skip a "just typed"
+  selection. 1170 tests (7 new). Verified in headless Chromium. Noted: rest-fill after a
+  partial measure groups oddly (16, 16, 4, 16) — pre-existing, not yet looked at.

@@ -32,6 +32,7 @@ import {
   toggleRestInvisible,
   transposeNotes,
   writeEvent,
+  removeNoteFromEvent,
 } from "@/commands/edit";
 import { setLyric, setLyricExtend } from "@/commands/lyrics";
 import { clearNudge } from "@/commands/layout";
@@ -117,6 +118,19 @@ function nearestOctave(step: Step, referenceOctave: number, referenceStepIndex: 
 }
 
 /** The alteration to apply to a freshly typed letter: the pending accidental, else the key signature's. */
+/**
+ * True when the selection is just the note/rest right before the cursor, which is what
+ * typing a note leaves behind (enter() selects what it wrote and moves the cursor past
+ * it). Clicking a note instead puts the cursor AT the note, so a clicked note never
+ * looks "just typed".
+ */
+function isJustTypedSelection(state: EditorState): boolean {
+  const before = chordTarget(state.score, state.cursor);
+  if (!before) return false;
+  const own = new Set(idsForEvent(before.event));
+  return state.selection.ids.every((id) => own.has(id));
+}
+
 function letterAlter(state: EditorState, step: Step): Alter {
   return state.entry.alter ?? keyAlter(keySignatureAt(state.score, state.cursor.measureIndex), step);
 }
@@ -178,10 +192,22 @@ function copiedMessage(clipboard: ClipboardContent): string {
  * `keptIds` instead of clearing the selection, so a second Delete on the same
  * selection reaches the now-plain note and actually erases it.
  */
-function eraseSelected(state: EditorState): { commands: Command[]; cursor?: Cursor; message?: string; keptIds: string[] } {
+function eraseSelected(
+  state: EditorState,
+  opts: { singleNotes: boolean },
+): { commands: Command[]; cursor?: Cursor; message?: string; keptIds: string[] } {
   const { score, selection } = state;
   const resolved = resolveSelection(score, selection);
   if (resolved.length === 0) return { commands: [], keptIds: [] };
+  // Which notes of each chord the selection names (a notehead click selects one note).
+  const selectedNotesByEvent = new Map<string, string[]>();
+  for (const id of selection.ids) {
+    const hit = locateNote(score, id);
+    if (!hit) continue;
+    const list = selectedNotesByEvent.get(hit.event.id) ?? [];
+    list.push(id);
+    selectedNotesByEvent.set(hit.event.id, list);
+  }
   const sorted = resolved
     .map((r) => ({ ...r, absolute: absoluteOffset(score, r.measureIndex, r.offset) }))
     .sort((a, b) => cmp(a.absolute, b.absolute));
@@ -191,6 +217,12 @@ function eraseSelected(state: EditorState): { commands: Command[]; cursor?: Curs
   let strippedEvents = 0;
   for (const r of sorted) {
     const event = r.event;
+    // Only some notes of a chord selected: remove just those notes; the rest of the chord stays.
+    const chosen = selectedNotesByEvent.get(event.id) ?? [];
+    if (opts.singleNotes && event.kind === "note" && chosen.length > 0 && chosen.length < event.notes.length) {
+      for (const noteId of chosen) commands.push(removeNoteFromEvent(event.id, noteId));
+      continue;
+    }
     const tiedNoteIds = event.kind === "note" ? event.notes.filter((n) => n.tieStart).map((n) => n.id) : [];
     const hasDecorations =
       event.kind === "note" &&
@@ -237,6 +269,7 @@ function eraseSelected(state: EditorState): { commands: Command[]; cursor?: Curs
  */
 function deleteSelection(
   state: EditorState,
+  opts: { singleNotes: boolean } = { singleNotes: true },
 ): { commands: Command[]; cursor?: Cursor; message?: string; keptIds: string[] } {
   const { score, selection } = state;
   const spannerIds = new Set(score.spanners.map((s) => s.id));
@@ -256,7 +289,7 @@ function deleteSelection(
     }
     if (score.layout.nudges[id]) commands.push(clearNudge(id));
   }
-  const erased = eraseSelected({ ...state, selection: { ids: remaining } });
+  const erased = eraseSelected({ ...state, selection: { ids: remaining } }, opts);
   return {
     commands: [...commands, ...erased.commands],
     ...(erased.cursor ? { cursor: erased.cursor } : {}),
@@ -347,10 +380,18 @@ function enter(state: EditorState, event: { kind: "note"; pitch: Pitch } | { kin
   }
 
   const newCursor: Cursor = { ...cursor, measureIndex, offset };
+  // The dot is one-shot: a dotted note is almost always followed by an undotted one
+  // (dotted eighth + 16th), so it applies to this note/rest only. The duration stays.
   const newEntry: EntryState =
     event.kind === "note"
-      ? { ...entry, alter: null, referenceOctave: event.pitch.octave, referenceStepIndex: STEPS.indexOf(event.pitch.step) }
-      : { ...entry, alter: null };
+      ? {
+          ...entry,
+          alter: null,
+          dots: 0,
+          referenceOctave: event.pitch.octave,
+          referenceStepIndex: STEPS.indexOf(event.pitch.step),
+        }
+      : { ...entry, alter: null, dots: 0 };
   const selectedId = noteEvent.kind === "note" ? noteEvent.notes[0]!.id : noteEvent.id;
   return { commands, cursor: newCursor, selection: { ids: [selectedId] }, entry: newEntry };
 }
@@ -666,7 +707,7 @@ export const handleKey: KeyHandler = (state, key) => {
     // nothing while still deleting the notes would be a surprising data loss.
     const hasCopyableEvent = resolveSelection(state.score, state.selection).length > 0;
     if (!hasCopyableEvent) {
-      const erased = deleteSelection(state);
+      const erased = deleteSelection(state, { singleNotes: false });
       return {
         commands: erased.commands,
         selection: { ids: erased.keptIds },
@@ -676,7 +717,7 @@ export const handleKey: KeyHandler = (state, key) => {
     }
     const clipboard = copySelection(state);
     if (!clipboard) return { commands: [], message: "Cannot copy tuplets yet" };
-    const erased = deleteSelection(state);
+    const erased = deleteSelection(state, { singleNotes: false });
     return {
       commands: erased.commands,
       clipboard,
@@ -740,12 +781,20 @@ export const handleKey: KeyHandler = (state, key) => {
     };
   }
 
-  // With entry OFF and something selected, duration digits / "." apply straight to the
-  // selection (setDuration/toggleDot) instead of changing the pending entry duration.
-  if (!entry.active && state.selection.ids.length > 0 && key.key in DURATION_DIGITS) {
-    return handleAction(state, { kind: "setDuration", base: DURATION_DIGITS[key.key]!, dots: entry.dots });
+  // With something selected, duration digits / "." change the selected notes/rests
+  // (setDuration/toggleDot): longer overwrites what follows, shorter leaves rests. A digit
+  // gives the plain value ("." then adds the dot). With note entry on, the digit also
+  // becomes the duration for the next note typed. Exception: typing a note auto-selects
+  // it, and that selection must not capture the duration keys meant for the NEXT note
+  // (8 . C 6 D), so a selection that is only the just-typed note falls through to the
+  // entry-duration handling below.
+  const durationTargetsSelection = state.selection.ids.length > 0 && !(entry.active && isJustTypedSelection(state));
+  if (!key.mod && !key.alt && durationTargetsSelection && key.key in DURATION_DIGITS) {
+    const base = DURATION_DIGITS[key.key]!;
+    const result = handleAction(state, { kind: "setDuration", base, dots: 0 });
+    return entry.active && result ? { ...result, entry: { ...entry, base, dots: 0 } } : result;
   }
-  if (!entry.active && state.selection.ids.length > 0 && key.key === ".") {
+  if (!key.mod && !key.alt && durationTargetsSelection && key.key === ".") {
     return handleAction(state, { kind: "toggleDot" });
   }
 
@@ -764,18 +813,32 @@ export const handleKey: KeyHandler = (state, key) => {
     const octave = nearestOctave(step, entry.referenceOctave, entry.referenceStepIndex);
     const alter = letterAlter(state, step);
     if (key.shift) {
-      const before = chordTarget(score, cursor);
-      if (!before || before.event.kind !== "note") {
-        return { commands: [], message: "No chord to add a note to" };
+      // The chord(s) to add to: the selected notes' chords when anything is selected,
+      // else the note just before the cursor (the one just entered).
+      const selected = resolveSelection(score, state.selection);
+      const targets =
+        selected.length > 0
+          ? selected.map((r) => ({ event: r.event, measureIndex: r.measureIndex }))
+          : resolveSelection(score, { ids: [chordTarget(score, cursor)?.event.id ?? ""] }).map((r) => ({
+              event: r.event,
+              measureIndex: r.measureIndex,
+            }));
+      const chords = targets.flatMap((t) => (t.event.kind === "note" ? [{ chord: t.event, measureIndex: t.measureIndex }] : []));
+      if (chords.length === 0) {
+        return { commands: [], message: selected.length > 0 ? "Select a note (not a rest) to add to" : "No chord to add a note to" };
       }
       // Chords are built upward, as a pianist spells them (G, B, D = root-position G
-      // major): the added pitch goes in the lowest octave strictly above the chord's
+      // major): the added pitch goes in the lowest octave strictly above each chord's
       // current top note, not in the octave nearest the last entered note.
-      const top = Math.max(...before.event.notes.map((n) => diatonic(n.pitch)));
       const stepIndex = STEPS.indexOf(step);
-      const chordOctave = Math.floor((top - stepIndex) / 7) + 1;
       return {
-        commands: [addNoteToEvent(before.event.id, { step, alter, octave: chordOctave })],
+        commands: chords.map(({ chord, measureIndex }) => {
+          const top = Math.max(...chord.notes.map((n) => diatonic(n.pitch)));
+          const chordOctave = Math.floor((top - stepIndex) / 7) + 1;
+          // The key signature where the chord is, which may differ from the cursor's measure.
+          const chordAlter = entry.alter ?? keyAlter(keySignatureAt(score, measureIndex), step);
+          return addNoteToEvent(chord.id, { step, alter: chordAlter, octave: chordOctave });
+        }),
         entry: { ...entry, alter: null },
       };
     }

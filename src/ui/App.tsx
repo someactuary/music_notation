@@ -18,6 +18,7 @@ import type { KeyStroke, MidiNoteOn } from "@/input/types";
 import { FIXTURES } from "../../test/fixtures";
 import { ScoreView } from "./ScoreView";
 import { ShortcutsPanel } from "./ShortcutsPanel";
+import { HelpPanel } from "./HelpPanel";
 import { StavesPanel } from "./StavesPanel";
 import { ImportPdfDialog } from "./ImportPdfDialog";
 import type { ImportedFromOmr } from "./ImportPdfDialog";
@@ -26,6 +27,7 @@ import { Palettes } from "./Palettes";
 import { ScoreInfoPanel } from "./ScoreInfoPanel";
 import {
   CompareIcon,
+  HelpIcon,
   InfoIcon,
   KeyboardIcon,
   NewIcon,
@@ -226,7 +228,9 @@ export function App() {
   const [fontReady, setFontReady] = useState(false);
   const [newFormOpen, setNewFormOpen] = useState(false);
   const [ioMessage, setIoMessage] = useState<string | null>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Help and Shortcuts open in the same spot, so opening one closes the other.
+  const [faqOpen, setFaqOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [stavesOpen, setStavesOpen] = useState(false);
   // The name last opened/saved as, remembered across reloads (localStorage) so "Save"
@@ -784,9 +788,24 @@ export function App() {
             <button
               type="button"
               className="icon-button"
+              title="Help & FAQ"
+              onClick={() => {
+                setFaqOpen((v) => !v);
+                setShortcutsOpen(false);
+              }}
+              aria-pressed={faqOpen}
+            >
+              <HelpIcon />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
               title="Keyboard shortcuts"
-              onClick={() => setHelpOpen((v) => !v)}
-              aria-pressed={helpOpen}
+              onClick={() => {
+                setShortcutsOpen((v) => !v);
+                setFaqOpen(false);
+              }}
+              aria-pressed={shortcutsOpen}
             >
               <KeyboardIcon />
             </button>
@@ -811,7 +830,8 @@ export function App() {
         />
       )}
       <Palettes font={BRAVURA} score={editor.score} cursor={cursor} onApplyAction={editor.applyAction} />
-      {helpOpen && <ShortcutsPanel onClose={() => setHelpOpen(false)} />}
+      {shortcutsOpen && <ShortcutsPanel onClose={() => setShortcutsOpen(false)} />}
+      {faqOpen && <HelpPanel onClose={() => setFaqOpen(false)} />}
       {infoOpen && (
         <ScoreInfoPanel meta={editor.score.meta} onApplyAction={editor.applyAction} onClose={() => setInfoOpen(false)} />
       )}
