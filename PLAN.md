@@ -691,4 +691,9 @@ score canvas is custom SVG either way).
   change would have caused: typing a note auto-selects it, so a digit right after typing
   changed that note instead of the next one; duration keys now skip a "just typed"
   selection. 1170 tests (7 new). Verified in headless Chromium. Noted: rest-fill after a
-  partial measure groups oddly (16, 16, 4, 16) — pre-existing, not yet looked at.
+  partial measure groups oddly (16, 16, 4, 16) — pre-existing; fixed next.
+- 2026-10-16 (fix: rest grouping). Rests the editor fills in are now grouped by the meter
+  (restsAt): beat-completing small-to-large in simple time, dotted beat rests in compound
+  time, pickups aligned to the bar's end. Old tests that expected a dotted-half rest after
+  a quarter in 4/4 now expect quarter + half. 1179 tests (9 new). Verified in headless
+  Chromium. Not covered yet: paste and writeSequence's split rests.

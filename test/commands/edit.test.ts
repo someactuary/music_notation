@@ -117,12 +117,15 @@ describe("writeEvent", () => {
     const next = produce(score, (d) => cmd.apply(d));
 
     const items = voiceOf(next, 0).items;
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(3);
     expect(items[0]!.kind).toBe("note");
     expect(asEvent(items[0]!).duration).toEqual({ base: 4, dots: 0 });
-    // remainder is 3/4, which decomposeDuration collapses to a single dotted-half rest
-    expect(items[1]!.kind).toBe("rest");
-    expect(asEvent(items[1]!).duration).toEqual({ base: 2, dots: 1 });
+    // The remaining 3/4 is grouped by the meter: a quarter rest to complete the first half,
+    // then a half rest on beat 3 (not one dotted-half rest across the middle of the bar).
+    expect(items.slice(1).map((i) => asEvent(i).duration)).toEqual([
+      { base: 4, dots: 0 },
+      { base: 2, dots: 0 },
+    ]);
   });
 
   it("a quarter written over the first half of a half note leaves a quarter rest for its remainder", () => {

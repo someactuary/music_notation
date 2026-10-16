@@ -38,7 +38,7 @@ import type {
 import { addMeasures } from "./basic";
 import { locateEvent, locateNote, type Event } from "./locate";
 import { captureStemBaseline, reconcileStemAfterPitchChange, type StemBaseline } from "./notation";
-import { decomposeDuration, restsFor } from "./rhythm";
+import { decomposeDuration, restsFor, restsAt, type RestMeter } from "./rhythm";
 import { transposeSemitone } from "./transpose";
 import type { Command } from "./types";
 import type { Cursor } from "@/input/types";
@@ -56,6 +56,25 @@ export class WriteRefused extends Error {
  * effect (the most recent `MeasureAttributes.timeSig` at or before this measure) or
  * this measure's own `actualLength` pickup override.
  */
+/**
+ * The meter rests in `measureIndex` are grouped by (see `restsAt`): its time signature,
+ * and, for a short first measure (a pickup), an origin that lines its offsets up with the
+ * END of a full bar. Undefined when no time signature is in effect.
+ */
+function restMeterAt(score: Score, measureIndex: number): RestMeter | undefined {
+  let ts: TimeSignature | undefined;
+  for (let i = 0; i <= measureIndex; i++) {
+    const ma = score.measures[i];
+    if (!ma) break;
+    if (ma.timeSig) ts = ma.timeSig;
+  }
+  if (!ts) return undefined;
+  const full = timeSigMeasureLength(ts);
+  const actual = score.measures[measureIndex]?.actualLength;
+  const origin = measureIndex === 0 && actual && lt(actual, full) ? sub(full, actual) : ZERO;
+  return { timeSig: ts, origin };
+}
+
 export function measureLengthAt(score: Score, measureIndex: number): Fraction {
   let ts: TimeSignature | undefined;
   for (let i = 0; i <= measureIndex; i++) {
@@ -231,9 +250,9 @@ function withDuration(event: Event, duration: NotatedDuration): Event {
   return { ...event, duration, notes: event.notes.map((n) => ({ ...n })) };
 }
 
-/** The prefix of `event` before the write span starts, re-expressed to fit `prefixLen`. */
-function prefixPieces(event: Event, prefixLen: Fraction): VoiceItem[] {
-  if (event.kind === "rest") return restsFor(prefixLen);
+/** The prefix of `event` (which starts at `start`) before the write span starts, re-expressed to fit `prefixLen`. */
+function prefixPieces(event: Event, start: Fraction, prefixLen: Fraction, meter: RestMeter | undefined): VoiceItem[] {
+  if (event.kind === "rest") return restsAt(start, prefixLen, meter);
   try {
     const decomposed = decomposeDuration(prefixLen);
     if (decomposed.length === 1) {
@@ -243,7 +262,7 @@ function prefixPieces(event: Event, prefixLen: Fraction): VoiceItem[] {
   } catch {
     // not representable as a single notated value (or at all) -> fall back to rests
   }
-  return restsFor(prefixLen);
+  return restsAt(start, prefixLen, meter);
 }
 
 /**
@@ -291,6 +310,8 @@ function spanReplace(
   newItems: VoiceItem[],
   allowSoleMeasureRest: boolean,
   capacity: Fraction,
+  /** How to group the rests this creates; undefined inside a tuplet (its own grid). */
+  meter: RestMeter | undefined,
 ): VoiceItem[] {
   const spanEnd = add(spanStart, spanLen);
   const positions =
@@ -311,14 +332,14 @@ function spanReplace(
     // overlapping item here is never a tuplet.
     const ev = item as Event;
     if (lt(offset, spanStart)) {
-      out.push(...prefixPieces(ev, sub(spanStart, offset)));
+      out.push(...prefixPieces(ev, offset, sub(spanStart, offset), meter));
     }
     if (!insertedNew) {
       out.push(...newItems);
       insertedNew = true;
     }
     if (lt(spanEnd, end)) {
-      out.push(...restsFor(sub(end, spanEnd)));
+      out.push(...restsAt(spanEnd, sub(end, spanEnd), meter));
     }
   }
   if (!insertedNew) out.push(...newItems);
@@ -347,7 +368,8 @@ function writeSpan(draft: Draft<Score>, cursor: Cursor, spanLen: Fraction, newIt
   const measureLen = measureLengthAt(draft, cursor.measureIndex);
 
   const target = resolveWriteTarget(voice, cursor.offset, measureLen, true);
-  const out = spanReplace(target.owner.items, target.offset, spanLen, newItems, target.allowSoleMeasureRest, target.capacity);
+  const meter = target.allowSoleMeasureRest ? restMeterAt(draft, cursor.measureIndex) : undefined;
+  const out = spanReplace(target.owner.items, target.offset, spanLen, newItems, target.allowSoleMeasureRest, target.capacity, meter);
   target.owner.items = out;
   if (target.allowSoleMeasureRest) normalizeVoice(voice);
 }
@@ -515,7 +537,10 @@ export function eraseEvent(eventId: string): Command {
     apply(draft) {
       const hit = locateEvent(draft, eventId);
       if (!hit) throw new Error(`eraseEvent: no event with id "${eventId}"`);
-      const rests = restsFor(notatedToFraction(hit.event.duration));
+      const len = notatedToFraction(hit.event.duration);
+      // At top level the rests are grouped by the meter from where the note stood.
+      const start = hit.tuplets.length === 0 ? topLevelPositions(hit.items)[hit.index]?.offset : undefined;
+      const rests = start ? restsAt(start, len, restMeterAt(draft, hit.measureIndex)) : restsFor(len);
       hit.items.splice(hit.index, 1, ...rests);
       normalizeVoice(hit.voice);
     },
@@ -653,7 +678,8 @@ function applyDurationChange(draft: Draft<Score>, eventId: string, duration: Not
   if (refusal) throw new WriteRefused(refusal);
 
   const updated = withDuration(hit.event, duration);
-  const out = spanReplace(hit.items, spanStart, newLen, [updated], allowSoleMeasureRest, capacity);
+  const meter = allowSoleMeasureRest ? restMeterAt(draft, hit.measureIndex) : undefined;
+  const out = spanReplace(hit.items, spanStart, newLen, [updated], allowSoleMeasureRest, capacity, meter);
   if (allowSoleMeasureRest) {
     hit.voice.items = out;
     normalizeVoice(hit.voice);

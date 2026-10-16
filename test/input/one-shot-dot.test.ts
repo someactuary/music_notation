@@ -73,3 +73,17 @@ describe("duration keys right after typing a note set up the NEXT note", () => {
     expect(summary(after.score).slice(0, 2)).toEqual(["C4/2", "E4/4"]);
   });
 });
+
+describe("rests left behind while typing are grouped by the meter", () => {
+  it("8 . C 6 D E 4 F leaves a 16th, an eighth and a quarter rest", () => {
+    expect(type(["8", ".", "c", "6", "d", "e", "4", "f"]).items).toEqual([
+      "C4/8.",
+      "D4/16",
+      "E4/16",
+      "F4/4",
+      "r/16",
+      "r/8",
+      "r/4",
+    ]);
+  });
+});

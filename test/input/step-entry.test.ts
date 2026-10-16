@@ -235,7 +235,7 @@ describe("handleKey: note entry", () => {
     const ev = h.voiceItems(0)[0]!;
     if (ev.kind !== "note") throw new Error("expected a note event");
     expect(ev.notes[0]!.pitch.alter).toBe(0);
-    expect(h.voiceItems(0)).toHaveLength(2); // the C plus the rest-filled remainder, no extra rest entered
+    expect(h.voiceItems(0)).toHaveLength(3); // the C plus the rest-filled remainder (quarter + half rest), no extra rest entered
   });
 });
 

@@ -55,7 +55,11 @@ describe("writeSequence", () => {
     const next = produce(score, (d) => cmd.apply(d));
 
     const m0 = voiceOf(next, 0).items;
-    expect(m0).toHaveLength(2); // 3/4 of untouched rests + the written quarter
+    expect(m0).toHaveLength(3); // 3/4 of rests (a half on beat 1, a quarter on beat 3) + the written quarter
+    expect(m0.slice(0, 2).map((i) => asEvent(i).duration)).toEqual([
+      { base: 2, dots: 0 },
+      { base: 4, dots: 0 },
+    ]);
     const last0 = m0[m0.length - 1]!;
     expect(asEvent(last0).duration).toEqual({ base: 4, dots: 0 });
     if (last0.kind !== "note") throw new Error("expected a note");
@@ -106,7 +110,7 @@ describe("writeSequence", () => {
     const m0 = voiceOf(next, 0).items;
     expect(m0.map((i) => (i.kind === "note" ? i.notes[0]!.pitch.step : i.kind))).toEqual(["C", "D", "E", "F"]);
     const m1 = voiceOf(next, 1).items;
-    expect(m1).toHaveLength(2); // G quarter + trailing rest
+    expect(m1).toHaveLength(3); // G quarter + a quarter rest and a half rest
     expect(asEvent(m1[0]!).kind).toBe("note");
     if (m1[0]!.kind !== "note") throw new Error("expected a note");
     expect(m1[0]!.notes[0]!.pitch.step).toBe("G");

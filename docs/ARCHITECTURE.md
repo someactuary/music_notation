@@ -416,6 +416,24 @@ wrote, duration keys would otherwise hit that note; `isJustTypedSelection` (the 
 is only the event right before the cursor, which a click never produces since a click puts
 the cursor AT the note) lets them fall through to setting the next note's duration/dot.
 
+Rests the editor creates (the remainder after a write or a duration change, the prefix of
+a shortened rest, an erased note) are grouped by the meter, `restsAt` in rhythm.ts,
+instead of greedily by length alone (which left e.g. 16th, 16th, quarter, 16th after a
+dotted eighth, 16th, 16th, quarter in 4/4):
+- Simple time: at each point the largest plain rest that starts on a multiple of its own
+  length and fits, so a partial beat is completed before larger rests begin (from the 10th
+  16th: 16th, eighth, quarter) and a half rest only starts on beat 1 or 3 of 4/4. A dotted
+  rest of a quarter or shorter is used when it's longer than the plain choice and starts on
+  a multiple of its undotted double (dotted quarter rest on beat 1 or 3).
+- Compound time (6/8, 9/8, 12/8, 6/4…): one dotted rest per whole beat; a partial beat is
+  filled the same aligned way inside the beat.
+- A short first measure (pickup) is aligned to the end of the bar (`restMeterAt` origin).
+- Inside a tuplet (its own grid) and anywhere the aligned split fails, the old
+  length-only `restsFor` is used. Paste (clipboard) and split events in `writeSequence`
+  still use `restsFor`.
+Consequence: a quarter on beat 1 of 4/4 is now followed by a quarter rest and a half rest,
+not a dotted-half rest.
+
 ## Manual layout control (2026-09-15)
 
 Requested by Frank after PDF import left a real file with a sparse last page (a
