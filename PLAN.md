@@ -713,3 +713,7 @@ score canvas is custom SVG either way).
   delivered by Web3Forms to frankc@mail.instinct.com (Frank chose Web3Forms over Typeform/
   Formspree/mailto). 8 new tests; verified in headless Chromium with the Web3Forms request
   intercepted (no real message sent).
+- 2026-10-16 (rollback: installable/offline website). Frank: the site "is not loading now and
+  tries to install itself as an app". Removed the manifest and the offline service worker;
+  the web build now ships a clean-up sw.js that deletes the saved copy and unregisters
+  itself for browsers that already had it. Feedback box kept.

@@ -12,7 +12,6 @@ Uses Audiveris or homr (installed on your own computer; see Getting Started) to 
 **https://someactuary.github.io/music_notation/** — nothing to install. Open it in Chrome, Edge, Firefox or Safari.
 
 - Everything except PDF/photo import works: writing and editing, playback with built-in sounds, printing, opening and saving `.pscore` files, and MusicXML import/export.
-- **Install it** like an app (Chrome/Edge: the install icon in the address bar; Safari: File → Add to Dock; phone: Share → Add to Home Screen). After the first visit it also works offline.
 - Your score is kept in that browser automatically. To move it to another computer, save it as a file and open it there.
 - Connecting a MIDI keyboard needs Chrome or Edge (Safari doesn't support Web MIDI).
 - **PDF/photo import** needs the full version below, because the recognition programs (Audiveris, homr) have to run on your own computer.
