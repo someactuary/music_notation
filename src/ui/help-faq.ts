@@ -59,6 +59,21 @@ export const FAQ: FaqEntry[] = [
       "Right after you type a note, the duration keys set up the **next** note; they don't change the one you just typed. To change a note you've already entered, click it first.",
     ],
   },
+  {
+    id: "beams",
+    question: "How do I break up (or join) beamed eighth notes?",
+    answer: [
+      "Use the **Beam** button in the palette (next to Flip Stem). It lights up when the selected notes are beamed, and pressing it switches that:",
+      {
+        list: [
+          "**One note selected:** pressing breaks the beam just before that note. To split four beamed eighths into 2 + 2, select the third one and press Beam. Press it again to rejoin.",
+          "**Several notes selected:** if they're beamed together, pressing gives them separate flags. If they aren't, pressing beams them together, even across a beat.",
+        ],
+      },
+      "Only eighth notes and shorter can be beamed. The button is greyed out (hover it to see why) when there's nothing to beam to, such as the first note of a measure.",
+      "Beams never cross a barline. Beaming changes are saved in your score file, but MusicXML export doesn't include them yet.",
+    ],
+  },
 ];
 
 export type InlinePiece = { kind: "text" | "key" | "bold"; text: string };

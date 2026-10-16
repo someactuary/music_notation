@@ -154,6 +154,8 @@ export type PaletteAction =
   | { kind: "clefChange"; clef: ClefKind }
   // Measures (the +/− buttons on a hovered measure): insert an empty measure at `index`
   // (so `measureIndex + 1` = after it), or delete one measure.
+  // The Beam toggle (src/input/beams.ts): break/rejoin or beam/unbeam the selection.
+  | { kind: "toggleBeam" }
   | { kind: "insertMeasure"; index: number }
   | { kind: "deleteMeasure"; measureIndex: number }
   | { kind: "setStaffName"; staffIndex: number; name: string; abbreviation?: string }

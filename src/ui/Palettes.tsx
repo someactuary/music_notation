@@ -2,7 +2,8 @@ import { useState } from "react";
 import { glyphChar } from "@/render/smufl";
 import type { SmuflFontData } from "@/render/smufl/types";
 import type { Articulation, ClefKind, NotatedDuration, Placement, Score } from "@/model";
-import type { Cursor, PaletteAction } from "@/input/types";
+import type { Cursor, PaletteAction, Selection } from "@/input/types";
+import { beamToggleState } from "@/input/beams";
 import { keySignatureAt } from "@/input/navigation";
 import { KEY_SIG_OPTIONS, keySigLabel } from "./key-labels";
 
@@ -10,6 +11,8 @@ export interface PalettesProps {
   font: SmuflFontData;
   score: Score;
   cursor: Cursor;
+  /** For the Beam toggle, whose state follows the selected notes. */
+  selection: Selection;
   onApplyAction: (action: PaletteAction) => void;
 }
 
@@ -233,7 +236,7 @@ function CappedCountField({
  * Key and Layout groups read `score`/`cursor` directly so they always show what's
  * true at the cursor's measure, including as the cursor moves.
  */
-export function Palettes({ font, score, cursor, onApplyAction }: PalettesProps) {
+export function Palettes({ font, score, cursor, selection, onApplyAction }: PalettesProps) {
   const [openForm, setOpenForm] = useState<"tempo" | "text" | null>(null);
   const effectiveKey = keySignatureAt(score, cursor.measureIndex);
   const keyChangesHere = score.measures[cursor.measureIndex]?.keySig !== undefined;
@@ -275,6 +278,20 @@ export function Palettes({ font, score, cursor, onApplyAction }: PalettesProps) 
         >
           Flip Stem
         </button>
+        {(() => {
+          const beam = beamToggleState(score, selection);
+          return (
+            <button
+              type="button"
+              aria-pressed={beam.pressed}
+              disabled={!beam.enabled}
+              title={beam.title}
+              onClick={() => onApplyAction({ kind: "toggleBeam" })}
+            >
+              Beam
+            </button>
+          );
+        })()}
       </div>
 
       <div className="palette-group" aria-label="Lines">

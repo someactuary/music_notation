@@ -866,6 +866,29 @@ export function buildBeamGroups(
   return out;
 }
 
+/**
+ * The beam groups one voice of one measure is drawn with (event ids, in time order), via
+ * the same `buildBeamGroups` the engraver uses. Pitch doesn't affect grouping, only stem
+ * direction, so no clef is needed. For the editor's beam toggle (src/input/beams.ts).
+ */
+export function beamGroupsOfVoice(voice: Voice, ts: TimeSignature, measureLength: Fraction): Id[][] {
+  const raw: RawEvent[] = positionedEvents(voice).map((pe) => ({
+    event: pe.event,
+    voiceIndex: voice.index,
+    offset: pe.offset,
+    length: pe.length,
+    steps: [],
+    tuplets: pe.tuplets,
+  }));
+  const groups = buildBeamGroups(
+    raw,
+    raw.map((_, i) => i),
+    ts,
+    measureLength,
+  );
+  return groups.map((g) => g.members.map((i) => raw[i]!.event.id));
+}
+
 /** In 4/4, join two beat groups of plain eighths into a half-measure group. */
 function mergeCoarseGroups(
   groups: number[][],

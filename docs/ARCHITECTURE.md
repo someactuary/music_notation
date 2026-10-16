@@ -434,6 +434,24 @@ dotted eighth, 16th, 16th, quarter in 4/4):
 Consequence: a quarter on beat 1 of 4/4 is now followed by a quarter rest and a half rest,
 not a dotted-half rest.
 
+## Beam toggle (2026-10-16)
+
+`NoteEvent.beam` overrides ("begin" | "continue" | "end" | "none") were always honored by
+`buildBeamGroups` and kept in `.pscore`, but nothing in the editor set them. One palette
+button, **Beam** (next to Flip Stem; Frank asked for a single toggle to save space),
+does it, with its pressed state following the selection (`src/input/beams.ts`):
+- One note: pressed when it's beamed to the note before it (`beamGroupsOfVoice`, the
+  engraver's own grouping, automatic beaming included). Press = `beam: "begin"` (break
+  before it). Unpressed press = rejoin: clear its override (and a blocking "end"/"none" on
+  the previous note); if automatic beaming still keeps them apart (across a beat), set
+  "continue". Disabled when there's no eighth-or-shorter note right before it.
+- Several notes (one measure, one voice): pressed when all are in one beam group. Press =
+  "none" on each (separate flags; the rest of a group regroups automatically). Unpressed
+  press = "begin" / "continue" / "end" across them.
+- `setBeamModes` (commands/notation.ts) writes the overrides ("auto" deletes the field).
+Gap: MusicXML export writes no `<beam>` elements at all (beaming is left to the reader),
+so manual beaming doesn't reach exported MusicXML.
+
 ## Manual layout control (2026-09-15)
 
 Requested by Frank after PDF import left a real file with a sparse last page (a

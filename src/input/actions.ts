@@ -23,6 +23,7 @@ import {
 import { addStaff, removeStaff, setBracket, setClef, setStaffName } from "@/commands/staves";
 import { setKeySignature } from "@/commands/keysig";
 import { setClefChange } from "@/commands/clefs";
+import { beamToggleCommands } from "./beams";
 import {
   clearForcedBreaks,
   clearNudge,
@@ -332,6 +333,9 @@ export const handleAction: ActionHandler = (state, action) => {
 
     case "setKeySignature":
       return { commands: [setKeySignature(cursor.measureIndex, action.keySig)] };
+
+    case "toggleBeam":
+      return beamToggleCommands(score, state.selection);
 
     case "insertMeasure": {
       const count = score.measures.length;

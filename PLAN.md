@@ -697,3 +697,8 @@ score canvas is custom SVG either way).
   time, pickups aligned to the bar's end. Old tests that expected a dotted-half rest after
   a quarter in 4/4 now expect quarter + half. 1179 tests (9 new). Verified in headless
   Chromium. Not covered yet: paste and writeSequence's split rests.
+- 2026-10-16 (feature: Beam toggle). Frank asked how to disconnect beamed eighths; the
+  model/engraver already supported beam overrides but the editor couldn't set them. One
+  palette toggle (Beam, beside Flip Stem): one note = break/rejoin the beam before it;
+  several = flags/beam together. FAQ entry added. 1185 tests (6 new). Verified in headless
+  Chromium. Gap: MusicXML export writes no beams.

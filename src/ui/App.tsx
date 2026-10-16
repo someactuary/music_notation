@@ -829,7 +829,13 @@ export function App() {
           onCancel={() => setNewFormOpen(false)}
         />
       )}
-      <Palettes font={BRAVURA} score={editor.score} cursor={cursor} onApplyAction={editor.applyAction} />
+      <Palettes
+        font={BRAVURA}
+        score={editor.score}
+        cursor={cursor}
+        selection={editor.selection}
+        onApplyAction={editor.applyAction}
+      />
       {shortcutsOpen && <ShortcutsPanel onClose={() => setShortcutsOpen(false)} />}
       {faqOpen && <HelpPanel onClose={() => setFaqOpen(false)} />}
       {infoOpen && (

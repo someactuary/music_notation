@@ -7,7 +7,7 @@
  */
 import type { Draft } from "immer";
 import { clefAt, positionedEvents, ZERO } from "@/model";
-import type { Anchor, Articulation, Attachment, Fraction, Id, Note, Score, Spanner, StemDirection, Voice } from "@/model";
+import type { Anchor, Articulation, Attachment, Fraction, Id, Note, NoteEvent, Score, Spanner, StemDirection, Voice } from "@/model";
 import { staffStep } from "@/engraving/geometry";
 import { stemDirectionForSteps, voiceStemDirection } from "@/engraving/semantic";
 import { locateEvent, locateNote } from "./locate";
@@ -30,6 +30,25 @@ export function locateEventAnchor(score: Score, eventId: Id): EventLocation | un
   const hit = locateEvent(score, eventId);
   if (!hit) return undefined;
   return { anchor: eventAnchor(eventId), partIndex: hit.partIndex, staffIndex: hit.event.staff ?? hit.staffIndex };
+}
+
+/**
+ * Sets each event's beam override: "begin" starts a new beam at it, "continue" joins it to
+ * the beam before it, "end" closes the beam after it, "none" gives it its own flag, and
+ * "auto" removes the override (automatic grouping by beat). Rests and missing ids are skipped.
+ */
+export function setBeamModes(changes: { eventId: Id; beam: NonNullable<NoteEvent["beam"]> }[]): Command {
+  return {
+    label: "Set beaming",
+    apply(draft) {
+      for (const { eventId, beam } of changes) {
+        const hit = locateEvent(draft, eventId);
+        if (!hit || hit.event.kind !== "note") continue;
+        if (beam === "auto") delete hit.event.beam;
+        else hit.event.beam = beam;
+      }
+    },
+  };
 }
 
 /** Adds `att` to the score. Callers are responsible for giving it a fresh id. */
